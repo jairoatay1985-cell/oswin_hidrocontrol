@@ -1,0 +1,35 @@
+{
+  "name": "HidroControl · Control hídrico renal",
+  "short_name": "HidroControl",
+  "description": "Calculadora de agua en alimentos para pacientes renales. Registro diario de ingesta hídrica.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a3d62",
+  "theme_color": "#0a3d62",
+  "lang": "es",
+  "categories": ["health", "medical", "utilities"],
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Agregar alimento",
+      "short_name": "Agregar",
+      "description": "Agregar un alimento al registro del día",
+      "url": "/#add",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
