@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a3d62">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="HidroControl">
+  <meta name="description" content="Control hídrico diario para pacientes renales.">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <title>HidroControl · Control hídrico renal</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --navy:#0a3d62; --navy-mid:#1a5276; --navy-light:#2e86c1;
+      --cyan:#17a589; --cyan-light:#1abc9c; --amber:#d4ac0d;
+      --danger:#c0392b; --danger-light:#e74c3c;
+      --surface:#f0f4f8; --card:#ffffff; --text:#1a2332;
+      --text-muted:#5d6d7e; --text-hint:#aab7c4;
+      --border:rgba(10,61,98,0.12);
+      --radius:16px; --radius-sm:10px;
+      --shadow:0 2px 20px rgba(10,61,98,0.08);
+      --font:'DM Sans',sans-serif; --mono:'DM Mono',monospace;
+    }
+    @media(prefers-color-scheme:dark){:root{
+      --navy:#1a5276; --navy-mid:#2471a3; --navy-light:#5dade2;
+      --surface:#0d1b2a; --card:#162032; --text:#e8edf2;
+      --text-muted:#8fa8be; --text-hint:#4a6278;
+      --border:rgba(255,255,255,0.07);
+      --shadow:0 2px 20px rgba(0,0,0,0.3);
+    }}
+    *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+    html,body{height:100%;font-family:var(--font);background:var(--surface);color:var(--text);font-size:16px;}
+    body{overflow-x:hidden;}
+
+    /* HEADER */
+    .header{background:var(--navy);position:sticky;top:0;z-index:100;padding-top:env(safe-area-inset-top,0);}
+    .header-inner{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;}
+    .logo{display:flex;align-items:center;gap:10px;}
+    .logo-icon{width:34px;height:34px;background:var(--cyan);border-radius:9px;display:flex;align-items:center;justify-content:center;}
+    .logo-icon svg{width:18px;height:18px;fill:white;}
+    .logo h1{font-size:16px;font-weight:600;color:white;letter-spacing:-.3px;}
+    .logo p{font-size:10px;color:rgba(255,255,255,.55);margin-top:1px;}
+    .patient-chip{background:rgba(255,255,255,.12);color:white;font-size:11px;padding:4px 11px;border-radius:20px;}
+
+    /* METER */
+    .meter-section{background:var(--navy);padding:0 16px 18px;}
+    .meter-card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:var(--radius);padding:16px;}
+    .limit-inline{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+    .limit-inline label{font-size:11px;color:rgba(255,255,255,.5);white-space:nowrap;}
+    .limit-inline input{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);color:white;border-radius:7px;padding:4px 8px;font-size:13px;font-family:var(--mono);width:72px;text-align:center;}
+    .limit-inline span{font-size:11px;color:rgba(255,255,255,.4);}
+    .meter-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;}
+    .meter-total{font-size:38px;font-weight:300;line-height:1;font-family:var(--mono);color:white;}
+    .meter-total span{font-size:16px;opacity:.6;margin-left:2px;}
+    .meter-label{font-size:11px;color:rgba(255,255,255,.45);margin-top:3px;text-transform:uppercase;letter-spacing:.7px;}
+    .meter-right{text-align:right;color:white;}
+    .meter-pct{font-size:26px;font-weight:600;font-family:var(--mono);}
+    .meter-sublabel{font-size:10px;opacity:.45;margin-top:2px;}
+    .bar-track{height:9px;background:rgba(255,255,255,.12);border-radius:999px;overflow:hidden;margin-bottom:12px;}
+    .bar-fill{height:100%;border-radius:999px;transition:width .5s cubic-bezier(.4,0,.2,1),background .4s;}
+    .meter-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;}
+    .mstat{background:rgba(255,255,255,.08);border-radius:8px;padding:8px 10px;}
+    .mstat-val{font-size:14px;font-weight:500;color:white;font-family:var(--mono);}
+    .mstat-lbl{font-size:9px;color:rgba(255,255,255,.4);margin-top:1px;text-transform:uppercase;letter-spacing:.5px;}
+    .alert-strip{border-radius:8px;padding:9px 12px;font-size:12px;display:flex;align-items:flex-start;gap:7px;margin-top:12px;}
+    .al-ok{background:rgba(23,165,137,.2);color:#7dcea0;border:1px solid rgba(23,165,137,.3);}
+    .al-warn{background:rgba(212,172,13,.18);color:#f4d03f;border:1px solid rgba(212,172,13,.3);}
+    .al-danger{background:rgba(192,57,43,.2);color:#f1948a;border:1px solid rgba(192,57,43,.35);}
+
+    /* MAIN */
+    .main{padding:16px 14px 90px;max-width:540px;margin:0 auto;}
+    .card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:14px;overflow:hidden;}
+    .card-hdr{padding:14px 16px 0;display:flex;align-items:center;gap:8px;}
+    .card-hdr-icon{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+    .ic-add{background:#e8f8f5;} .ic-log{background:#eaf4fe;} .ic-cal{background:#fdf2f8;} .ic-set{background:#fef9e7;}
+    .card-hdr h2{font-size:13px;font-weight:500;color:var(--text-muted);}
+    .card-body{padding:12px 16px 16px;}
+
+    /* FORM */
+    .fg{display:flex;flex-direction:column;gap:4px;}
+    .fg label{font-size:11px;color:var(--text-muted);}
+    .fg select,.fg input{border:1.5px solid var(--border);background:var(--surface);border-radius:var(--radius-sm);padding:9px 11px;font-size:14px;font-family:var(--font);color:var(--text);appearance:none;-webkit-appearance:none;transition:border-color .2s;}
+    .fg select:focus,.fg input:focus{outline:none;border-color:var(--navy-light);}
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+    .full{grid-column:1/-1;}
+    .preview-pill{background:linear-gradient(135deg,#e8f8f5,#d1f2eb);border:1.5px solid #a9dfbf;border-radius:var(--radius-sm);padding:11px 14px;display:flex;align-items:center;gap:10px;margin-top:4px;}
+    .pdrop{width:32px;height:32px;background:var(--cyan);border-radius:50% 50% 50% 20%;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+    .pdrop svg{width:16px;height:16px;fill:white;}
+    .preview-ml{font-size:22px;font-weight:500;font-family:var(--mono);color:var(--navy);}
+    .preview-info{font-size:11px;color:var(--text-muted);}
+    @media(prefers-color-scheme:dark){.preview-pill{background:rgba(23,165,137,.15);border-color:rgba(23,165,137,.3);}.preview-ml{color:var(--cyan-light);}}
+    .btn-add{width:100%;margin-top:10px;padding:13px;background:var(--navy);color:white;border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:500;font-family:var(--font);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:background .2s,transform .1s;}
+    .btn-add:active{transform:scale(.98);background:var(--navy-mid);}
+    .btn-add svg{width:16px;height:16px;fill:white;}
+
+    /* TABS inside card */
+    .tab-row{display:flex;gap:0;border-bottom:1px solid var(--border);margin:0 -16px;padding:0 16px;}
+    .tab-btn{padding:9px 14px;font-size:12px;font-weight:500;color:var(--text-muted);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;font-family:var(--font);transition:color .2s,border-color .2s;}
+    .tab-btn.active{color:var(--navy-light);border-bottom-color:var(--navy-light);}
+
+    /* LOG */
+    .log-empty{text-align:center;padding:20px 0;color:var(--text-hint);font-size:13px;}
+    .log-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);}
+    .log-item:last-child{border-bottom:none;}
+    .log-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+    .log-info{flex:1;min-width:0;}
+    .log-name{font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .log-meta{font-size:10px;color:var(--text-muted);margin-top:2px;display:flex;gap:5px;align-items:center;}
+    .tag-crudo{background:#e8f8f5;color:#0e6655;font-size:9px;padding:1px 5px;border-radius:3px;font-weight:500;}
+    .tag-cocido{background:#fef5e7;color:#784212;font-size:9px;padding:1px 5px;border-radius:3px;font-weight:500;}
+    .tag-bebida{background:#eaf4fe;color:#154360;font-size:9px;padding:1px 5px;border-radius:3px;font-weight:500;}
+    @media(prefers-color-scheme:dark){.tag-crudo{background:rgba(23,165,137,.2);color:#7dcea0;}.tag-cocido{background:rgba(212,172,13,.15);color:#f9e79f;}.tag-bebida{background:rgba(46,134,193,.2);color:#85c1e9;}}
+    .log-ml{font-size:13px;font-weight:600;font-family:var(--mono);white-space:nowrap;}
+    .log-del{background:none;border:none;cursor:pointer;color:var(--text-hint);padding:3px;border-radius:5px;display:flex;align-items:center;}
+    .log-del svg{width:15px;height:15px;fill:currentColor;}
+    .log-del:active{color:var(--danger-light);}
+
+    /* MEAL BARS */
+    .meal-row{display:flex;align-items:center;gap:9px;margin-bottom:9px;}
+    .meal-row:last-child{margin-bottom:0;}
+    .meal-name{font-size:12px;color:var(--text-muted);width:78px;flex-shrink:0;text-align:right;}
+    .meal-track{flex:1;height:7px;background:var(--border);border-radius:999px;overflow:hidden;}
+    .meal-fill{height:100%;border-radius:999px;transition:width .4s;}
+    .meal-val{font-size:11px;font-family:var(--mono);color:var(--text-muted);width:44px;text-align:right;flex-shrink:0;}
+    .meal-empty{font-size:12px;color:var(--text-hint);text-align:center;padding:10px 0;}
+
+    /* CALENDAR */
+    .cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+    .cal-nav span{font-size:14px;font-weight:500;color:var(--text);}
+    .cal-nav button{background:none;border:none;cursor:pointer;color:var(--text-muted);padding:4px 8px;border-radius:6px;font-size:18px;font-family:var(--font);}
+    .cal-nav button:active{background:var(--surface);}
+    .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;text-align:center;}
+    .cal-dow{font-size:10px;color:var(--text-hint);padding:2px 0 6px;font-weight:500;}
+    .cal-day{font-size:12px;padding:6px 2px;border-radius:7px;cursor:pointer;position:relative;transition:background .15s;color:var(--text-muted);}
+    .cal-day.has-data{color:var(--text);font-weight:500;}
+    .cal-day.has-data::after{content:'';position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:var(--cyan);}
+    .cal-day.over::after{background:var(--danger-light);}
+    .cal-day.today{background:var(--navy-light);color:white;font-weight:600;}
+    .cal-day.today::after{background:white;}
+    .cal-day.selected{background:var(--surface);color:var(--navy-light);border:1.5px solid var(--navy-light);}
+    .cal-day:active{background:var(--surface);}
+    .cal-day.empty{cursor:default;}
+    .day-detail{background:var(--surface);border-radius:var(--radius-sm);padding:12px;margin-top:10px;}
+    .day-detail-title{font-size:12px;font-weight:500;color:var(--text-muted);margin-bottom:8px;}
+    .day-detail-row{display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:4px 0;border-bottom:1px solid var(--border);}
+    .day-detail-row:last-child{border-bottom:none;}
+    .day-detail-empty{font-size:12px;color:var(--text-hint);text-align:center;padding:8px 0;}
+    .export-btn{width:100%;margin-top:10px;padding:11px;background:transparent;color:var(--navy-light);border:1.5px solid var(--navy-light);border-radius:var(--radius-sm);font-size:13px;font-weight:500;font-family:var(--font);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:background .2s;}
+    .export-btn:active{background:var(--navy-light);color:white;}
+    .export-btn svg{width:16px;height:16px;fill:currentColor;}
+
+    /* SETTINGS */
+    .set-section{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;margin-bottom:14px;}
+    .set-section h3{font-size:13px;font-weight:500;color:var(--text-muted);margin-bottom:12px;}
+    .set-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+    .set-row:last-child{margin-bottom:0;}
+    .set-row label{font-size:13px;color:var(--text);flex:1;}
+    .set-row input{border:1.5px solid var(--border);background:var(--surface);color:var(--text);border-radius:8px;padding:7px 10px;font-size:15px;font-family:var(--mono);width:80px;text-align:center;}
+    .set-row span{font-size:12px;color:var(--text-muted);}
+    .danger-btn{width:100%;padding:12px;border:1.5px solid var(--danger);background:transparent;color:var(--danger);border-radius:var(--radius-sm);font-size:13px;font-weight:500;font-family:var(--font);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:background .2s,color .2s;}
+    .danger-btn:active{background:var(--danger);color:white;}
+    .danger-btn svg{width:16px;height:16px;fill:currentColor;}
+    .about-p{font-size:12px;color:var(--text-muted);line-height:1.7;margin-bottom:6px;}
+    .about-p:last-child{margin-bottom:0;}
+    .about-warn{color:#c0392b;font-size:12px;line-height:1.6;}
+
+    /* NAV */
+    .bottom-bar{position:fixed;bottom:0;left:0;right:0;z-index:100;background:var(--card);border-top:1px solid var(--border);display:flex;padding:6px 0 calc(6px + env(safe-area-inset-bottom,0));box-shadow:0 -3px 15px rgba(0,0,0,.06);}
+    .nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;cursor:pointer;padding:5px 0;color:var(--text-hint);font-family:var(--font);transition:color .2s;}
+    .nav-btn svg{width:20px;height:20px;fill:currentColor;}
+    .nav-btn span{font-size:9px;text-transform:uppercase;letter-spacing:.4px;}
+    .nav-btn.active{color:var(--navy-light);}
+
+    .section-view{display:none;}
+    .section-view.active{display:block;}
+
+    .install-banner{background:var(--navy);color:white;border-radius:var(--radius);padding:14px 16px;margin-bottom:14px;display:flex;align-items:center;gap:10px;}
+    .install-banner-text{flex:1;}
+    .install-banner-text h3{font-size:13px;font-weight:500;margin-bottom:2px;}
+    .install-banner-text p{font-size:11px;opacity:.6;}
+    .install-btn{background:var(--cyan);color:white;border:none;padding:7px 12px;border-radius:7px;font-size:12px;font-weight:500;font-family:var(--font);cursor:pointer;white-space:nowrap;}
+    .close-banner{background:none;border:none;color:white;opacity:.5;cursor:pointer;padding:2px;}
+    .close-banner svg{width:14px;height:14px;fill:currentColor;}
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-inner">
+    <div class="logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8 0-3.17 1.85-5.91 4.54-7.24L12 9l3.46-4.24C18.15 6.09 20 8.83 20 12c0 4.41-3.59 8-8 8z"/></svg>
+      </div>
+      <div><h1>HidroControl</h1><p>Control hídrico renal</p></div>
+    </div>
+    <div class="patient-chip">Oswin G.</div>
+  </div>
+  <div class="meter-section">
+    <div class="meter-card">
+      <div class="limit-inline">
+        <label>Límite diario:</label>
+        <input type="number" id="limitH" value="800" min="100" max="3000" step="50">
+        <span>ml</span>
+      </div>
+      <div class="meter-top">
+        <div>
+          <div class="meter-total" id="mTotal">0<span>ml</span></div>
+          <div class="meter-label">agua consumida hoy</div>
+        </div>
+        <div class="meter-right">
+          <div class="meter-pct" id="mPct">0%</div>
+          <div class="meter-sublabel">del límite</div>
+        </div>
+      </div>
+      <div class="bar-track"><div class="bar-fill" id="mBar" style="width:0%"></div></div>
+      <div class="meter-stats">
+        <div class="mstat"><div class="mstat-val" id="mLimit">800</div><div class="mstat-lbl">Límite ml</div></div>
+        <div class="mstat"><div class="mstat-val" id="mLeft">800</div><div class="mstat-lbl">Disponible</div></div>
+        <div class="mstat"><div class="mstat-val" id="mCount">0</div><div class="mstat-lbl">Registros</div></div>
+      </div>
+      <div id="alertStrip"></div>
+    </div>
+  </div>
+</header>
+
+<div class="main">
+
+  <div class="install-banner" id="installBanner" style="display:none">
+    <div><svg width="24" height="24" viewBox="0 0 24 24" fill="white" style="opacity:.8"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg></div>
+    <div class="install-banner-text"><h3>Instalar como app</h3><p>Acceso rápido desde la pantalla de inicio</p></div>
+    <button class="install-btn" id="installBtn">Instalar</button>
+    <button class="close-banner" id="closeBanner"><svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
+  </div>
+
+  <!-- AGREGAR -->
+  <div class="section-view active" id="view-add">
+    <div class="card">
+      <div class="card-hdr">
+        <div class="card-hdr-icon ic-add"><svg width="15" height="15" viewBox="0 0 24 24" fill="#17a589"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg></div>
+        <h2>Agregar alimento o bebida</h2>
+      </div>
+      <div class="card-body">
+        <div class="tab-row">
+          <button class="tab-btn active" id="tabFood" onclick="switchInputTab('food')">Alimento</button>
+          <button class="tab-btn" id="tabDrink" onclick="switchInputTab('drink')">Bebida</button>
+        </div>
+
+        <!-- FOOD FORM -->
+        <div id="formFood" style="margin-top:12px;">
+          <div class="form-grid">
+            <div class="fg"><label>Categoría</label><select id="catSel"></select></div>
+            <div class="fg"><label>Estado</label><select id="stateSel"><option value="crudo">Crudo / natural</option><option value="cocido">Cocido</option></select></div>
+            <div class="fg full"><label>Alimento</label><select id="foodSel"></select></div>
+            <div class="fg"><label>Peso (g)</label><input type="number" id="gramInput" value="100" min="1" max="2000" step="5" inputmode="numeric"></div>
+            <div class="fg"><label>Momento</label><select id="mealSel"><option>Desayuno</option><option>Almuerzo</option><option>Merienda</option><option>Cena</option><option>Otro</option></select></div>
+          </div>
+          <div class="preview-pill" style="margin-top:10px;">
+            <div class="pdrop"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/></svg></div>
+            <div><div class="preview-ml" id="previewMl">— ml</div><div class="preview-info" id="previewInfo">Selecciona un alimento</div></div>
+          </div>
+          <button class="btn-add" id="addFoodBtn">
+            <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+            Agregar al registro
+          </button>
+        </div>
+
+        <!-- DRINK FORM -->
+        <div id="formDrink" style="display:none;margin-top:12px;">
+          <div class="form-grid">
+            <div class="fg full"><label>Bebida</label><select id="drinkSel"></select></div>
+            <div class="fg"><label>Cantidad (ml)</label><input type="number" id="drinkMl" value="250" min="1" max="2000" step="10" inputmode="numeric"></div>
+            <div class="fg"><label>Momento</label><select id="drinkMealSel"><option>Desayuno</option><option>Almuerzo</option><option>Merienda</option><option>Cena</option><option>Otro</option></select></div>
+          </div>
+          <div class="preview-pill" style="margin-top:10px;">
+            <div class="pdrop" style="background:#2e86c1;"><svg viewBox="0 0 24 24"><path d="M20 3H4v10c0 3.31 2.69 6 6 6h4c3.31 0 6-2.69 6-6V3zm-2 10c0 2.21-1.79 4-4 4h-4c-2.21 0-4-1.79-4-4V5h12v8zM9 21h6v2H9z"/></svg></div>
+            <div><div class="preview-ml" id="drinkPreviewMl">250 ml</div><div class="preview-info" id="drinkPreviewInfo">Agua pura · 100% agua</div></div>
+          </div>
+          <button class="btn-add" id="addDrinkBtn" style="background:#1a5276;">
+            <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+            Agregar bebida
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- REGISTRO -->
+  <div class="section-view" id="view-log">
+    <div class="card">
+      <div class="card-hdr">
+        <div class="card-hdr-icon ic-log"><svg width="15" height="15" viewBox="0 0 24 24" fill="#2e86c1"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg></div>
+        <h2>Registro de hoy</h2>
+      </div>
+      <div class="card-body" id="logList"><div class="log-empty">Aún no se registraron alimentos</div></div>
+    </div>
+    <div class="card">
+      <div class="card-hdr">
+        <div class="card-hdr-icon ic-set"><svg width="15" height="15" viewBox="0 0 24 24" fill="#d4ac0d"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg></div>
+        <h2>Por momento del día</h2>
+      </div>
+      <div class="card-body" id="mealBreakdown"><div class="meal-empty">Sin datos</div></div>
+    </div>
+  </div>
+
+  <!-- HISTORIAL -->
+  <div class="section-view" id="view-history">
+    <div class="card">
+      <div class="card-hdr">
+        <div class="card-hdr-icon ic-cal"><svg width="15" height="15" viewBox="0 0 24 24" fill="#8e44ad"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/></svg></div>
+        <h2>Historial mensual</h2>
+      </div>
+      <div class="card-body">
+        <div class="cal-nav">
+          <button id="prevMonth">&#8249;</button>
+          <span id="calMonthLabel"></span>
+          <button id="nextMonth">&#8250;</button>
+        </div>
+        <div class="cal-grid" id="calGrid"></div>
+        <div class="day-detail" id="dayDetail" style="display:none"></div>
+        <button class="export-btn" id="exportBtn">
+          <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+          Descargar historial CSV
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- AJUSTES -->
+  <div class="section-view" id="view-settings">
+    <div class="set-section">
+      <h3>Límite hídrico diario</h3>
+      <div class="set-row">
+        <label>Restricción de líquidos</label>
+        <input type="number" id="limitBig" value="800" min="100" max="3000" step="50" inputmode="numeric">
+        <span>ml/día</span>
+      </div>
+      <p class="about-p" style="margin-top:6px;">Ajustar según indicación del nefrólogo.</p>
+    </div>
+    <div class="set-section">
+      <h3>Reinicio diario</h3>
+      <p class="about-p">El registro se borra automáticamente al iniciar un nuevo día. También podés hacerlo manualmente.</p>
+      <button class="danger-btn" id="newDayBtn">
+        <svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+        Iniciar nuevo día
+      </button>
+    </div>
+    <div class="set-section">
+      <h3>Acerca de HidroControl</h3>
+      <p class="about-p">Calculadora de contenido de agua en alimentos y bebidas para pacientes con enfermedad renal crónica. Registro diario y historial mensual.</p>
+      <p class="about-p">Valores basados en tablas USDA, FAO e INCAP. Valores aproximados.</p>
+      <p class="about-warn">⚠ Esta herramienta es de apoyo al seguimiento médico. Consultar siempre con el nefrólogo o nutricionista tratante.</p>
+    </div>
+  </div>
+
+</div>
+
+<nav class="bottom-bar">
+  <button class="nav-btn active" data-view="add">
+    <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg><span>Agregar</span>
+  </button>
+  <button class="nav-btn" data-view="log">
+    <svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg><span>Registro</span>
+  </button>
+  <button class="nav-btn" data-view="history">
+    <svg viewBox="0 0 24 24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/></svg><span>Historial</span>
+  </button>
+  <button class="nav-btn" data-view="settings">
+    <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg><span>Ajustes</span>
+  </button>
+</nav>
+
+<script>
+// ── DATA ─────────────────────────────────────────────────────────────────────
+const DB = {
+  Frutas:{crudo:[{name:"Sandía",pct:92},{name:"Frutilla / fresa",pct:91},{name:"Melón",pct:90},{name:"Naranja",pct:87},{name:"Mandarina",pct:87},{name:"Limón",pct:89},{name:"Durazno / melocotón",pct:89},{name:"Pera",pct:84},{name:"Manzana roja",pct:86},{name:"Manzana verde",pct:85},{name:"Uva",pct:81},{name:"Banana / plátano",pct:75},{name:"Kiwi",pct:83},{name:"Mango",pct:83},{name:"Piña / ananá",pct:86},{name:"Ciruela",pct:87},{name:"Palta / aguacate",pct:73},{name:"Guayaba",pct:81},{name:"Maracuyá",pct:73},{name:"Papaya / mamón",pct:88},{name:"Guanábana",pct:82},{name:"Tamarindo (pulpa)",pct:31},{name:"Higo fresco",pct:79},{name:"Granada",pct:78},{name:"Frambuesa",pct:86},{name:"Mora",pct:88}],cocido:[{name:"Manzana cocida",pct:80},{name:"Pera cocida",pct:80},{name:"Durazno en almíbar",pct:84},{name:"Ciruela cocida",pct:68},{name:"Banana asada",pct:65},{name:"Papaya cocida",pct:84},{name:"Guayaba en compota",pct:76},{name:"Membrillo cocido",pct:79},{name:"Higo cocido",pct:72}]},
+  Vegetales:{crudo:[{name:"Pepino",pct:96},{name:"Lechuga",pct:96},{name:"Apio",pct:95},{name:"Tomate",pct:94},{name:"Morrón / pimiento",pct:92},{name:"Coliflor",pct:92},{name:"Repollo blanco",pct:92},{name:"Repollo colorado",pct:90},{name:"Espinaca",pct:91},{name:"Acelga",pct:93},{name:"Cilantro fresco",pct:93},{name:"Verdeo",pct:90},{name:"Brócoli",pct:89},{name:"Zanahoria",pct:88},{name:"Cebolla",pct:89},{name:"Remolacha",pct:87},{name:"Papa / patata",pct:79},{name:"Zapallo / calabaza",pct:91},{name:"Choclo / maíz",pct:76},{name:"Berenjena",pct:92},{name:"Espárrago",pct:92},{name:"Nabo",pct:91},{name:"Puerro",pct:83},{name:"Rúcula",pct:91},{name:"Berro",pct:95}],cocido:[{name:"Espinaca cocida",pct:91},{name:"Acelga cocida",pct:93},{name:"Repollo cocido",pct:93},{name:"Brócoli cocido",pct:91},{name:"Zanahoria cocida",pct:90},{name:"Papa hervida",pct:77},{name:"Papa al horno",pct:72},{name:"Coliflor cocida",pct:92},{name:"Zapallo hervido",pct:94},{name:"Cebolla cocida",pct:88},{name:"Remolacha cocida",pct:87},{name:"Choclo cocido",pct:73},{name:"Berenjena cocida",pct:94},{name:"Tomate cocido",pct:92},{name:"Verdeo salteado",pct:87},{name:"Espárrago cocido",pct:93}]},
+  Carnes:{crudo:[{name:"Pollo pechuga",pct:74},{name:"Pollo muslo",pct:70},{name:"Pollo ala",pct:67},{name:"Carne vacuna magra",pct:71},{name:"Carne vacuna con grasa",pct:60},{name:"Cerdo lomo",pct:71},{name:"Cerdo costilla",pct:58},{name:"Merluza / pescado blanco",pct:80},{name:"Salmón",pct:64},{name:"Atún fresco",pct:68},{name:"Hígado vacuno",pct:71},{name:"Cordero",pct:67},{name:"Pavo / pavita",pct:74}],cocido:[{name:"Pollo asado (pechuga)",pct:64},{name:"Pollo asado (muslo)",pct:60},{name:"Pollo hervido",pct:67},{name:"Carne vacuna asada",pct:55},{name:"Carne vacuna hervida",pct:58},{name:"Bife a la plancha",pct:54},{name:"Cerdo asado",pct:58},{name:"Pescado al horno",pct:72},{name:"Salmón cocido",pct:59},{name:"Hígado salteado",pct:62},{name:"Hamburguesa cocida",pct:50},{name:"Milanesa de pollo",pct:52},{name:"Milanesa de carne",pct:48}]},
+  Proteínas:{crudo:[{name:"Huevo entero crudo",pct:76},{name:"Clara de huevo",pct:88},{name:"Yema de huevo",pct:49},{name:"Atún en lata (agua)",pct:70},{name:"Atún en lata (aceite)",pct:58},{name:"Sardinas en lata",pct:60}],cocido:[{name:"Huevo duro / hervido",pct:75},{name:"Huevo frito",pct:69},{name:"Huevo revuelto",pct:73},{name:"Tortilla / omelette",pct:68},{name:"Chorizo cocido",pct:45},{name:"Chorizo criollo hervido",pct:50},{name:"Morcilla cocida",pct:44}]},
+  Embutidos:{crudo:[{name:"Jamón cocido / paleta",pct:75},{name:"Jamón crudo / serrano",pct:48},{name:"Salame / salami",pct:30},{name:"Salame tipo milán",pct:28},{name:"Mortadela",pct:55},{name:"Salchicha Frankfurt",pct:60},{name:"Paté de hígado",pct:46},{name:"Fiambre de pollo",pct:70}],cocido:[{name:"Salchicha hervida",pct:58},{name:"Mortadela a la plancha",pct:50},{name:"Jamón a la plancha",pct:72}]},
+  Cereales:{crudo:[{name:"Arroz blanco crudo",pct:12},{name:"Arroz integral crudo",pct:10},{name:"Avena cruda",pct:8},{name:"Pasta seca",pct:10},{name:"Harina de trigo",pct:12},{name:"Harina de trigo integral",pct:11},{name:"Harina de maíz (polenta)",pct:10},{name:"Harina de maíz precocida (masarepa)",pct:11},{name:"Harina de arroz",pct:10},{name:"Quinoa cruda",pct:13},{name:"Pan blanco",pct:37},{name:"Pan integral",pct:38},{name:"Pan de salvado",pct:38},{name:"Pan de trigo",pct:35},{name:"Pan lactal / de molde",pct:38},{name:"Pan árabe / pita",pct:32},{name:"Pan de centeno",pct:37},{name:"Galleta de agua / crackers",pct:4},{name:"Galleta dulce",pct:5},{name:"Galleta integral",pct:5},{name:"Galleta de arroz",pct:6},{name:"Arepa cruda (masa)",pct:55},{name:"Cornflakes",pct:4},{name:"Granola",pct:5}],cocido:[{name:"Arroz blanco cocido",pct:68},{name:"Arroz integral cocido",pct:70},{name:"Avena cocida (porridge)",pct:85},{name:"Pasta cocida",pct:65},{name:"Polenta cocida",pct:76},{name:"Quinoa cocida",pct:72},{name:"Arepa cocida / asada",pct:40},{name:"Arepa frita",pct:30},{name:"Tortilla de maíz",pct:44}]},
+  Lácteos:{crudo:[{name:"Leche entera",pct:88},{name:"Leche descremada",pct:91},{name:"Leche semidescremada",pct:89},{name:"Leche de cabra",pct:87},{name:"Yogur natural entero",pct:85},{name:"Yogur natural descremado",pct:88},{name:"Yogur griego",pct:82},{name:"Yogur bebible",pct:87},{name:"Queso fresco",pct:80},{name:"Queso cottage",pct:79},{name:"Queso ricota",pct:74},{name:"Queso mozzarella",pct:50},{name:"Queso cremoso / crema",pct:54},{name:"Queso brie",pct:48},{name:"Queso gouda",pct:40},{name:"Queso cheddar",pct:37},{name:"Queso sardo",pct:36},{name:"Queso parmesano",pct:29},{name:"Queso reggianito",pct:31},{name:"Queso provolone",pct:41},{name:"Queso azul / roquefort",pct:42},{name:"Crema de leche",pct:58},{name:"Mantequilla / manteca",pct:16},{name:"Dulce de leche",pct:27},{name:"Helado de crema",pct:61},{name:"Leche condensada",pct:27}],cocido:[{name:"Leche caliente",pct:88},{name:"Queso fundido",pct:45},{name:"Flan de leche",pct:78},{name:"Ricota calentada",pct:72},{name:"Bechamel",pct:82},{name:"Arroz con leche",pct:74}]},
+  Legumbres:{crudo:[{name:"Lentejas secas",pct:10},{name:"Porotos negros secos",pct:10},{name:"Porotos blancos secos",pct:10},{name:"Garbanzos secos",pct:10},{name:"Soja seca",pct:8},{name:"Arvejas secas",pct:12}],cocido:[{name:"Lentejas cocidas",pct:70},{name:"Porotos negros cocidos",pct:67},{name:"Porotos blancos cocidos",pct:67},{name:"Garbanzos cocidos",pct:60},{name:"Soja cocida",pct:63},{name:"Arvejas cocidas",pct:79},{name:"Habas cocidas",pct:71},{name:"Hummus",pct:65}]},
+  Varios:{crudo:[{name:"Gelatina preparada (dietética)",pct:98},{name:"Gelatina preparada (con azúcar)",pct:97},{name:"Mermelada de fruta",pct:35},{name:"Mermelada light",pct:42},{name:"Mermelada de durazno",pct:33},{name:"Mermelada de frutilla",pct:36},{name:"Dulce de membrillo",pct:22},{name:"Miel",pct:17},{name:"Azúcar blanca",pct:1},{name:"Caldo (taza)",pct:98},{name:"Sopa instantánea",pct:96}],cocido:[{name:"Gelatina caliente",pct:98},{name:"Mermelada casera caliente",pct:40},{name:"Sopa de verduras casera",pct:95},{name:"Caldo de pollo casero",pct:97}]}
+};
+
+// BEBIDAS: pct = % de agua, alcohol = % alcohol vol
+const DRINKS = [
+  // Agua y sin alcohol
+  {name:"Agua mineral / corriente",     pct:100, alc:0,  cat:"agua"},
+  {name:"Agua saborizada (sin azúcar)", pct:99,  alc:0,  cat:"agua"},
+  {name:"Agua saborizada (con azúcar)", pct:98,  alc:0,  cat:"agua"},
+  {name:"Agua tónica",                  pct:91,  alc:0,  cat:"agua"},
+  // Gaseosas
+  {name:"Gaseosa cola (Coca, Pepsi)",   pct:90,  alc:0,  cat:"gaseosa"},
+  {name:"Gaseosa sabor naranja",        pct:89,  alc:0,  cat:"gaseosa"},
+  {name:"Gaseosa light / zero",         pct:99,  alc:0,  cat:"gaseosa"},
+  {name:"Gaseosa lima-limón (7UP, Sprite)", pct:90, alc:0, cat:"gaseosa"},
+  {name:"Gaseosa uva / fanta uva",      pct:88,  alc:0,  cat:"gaseosa"},
+  {name:"Soda / agua con gas",          pct:100, alc:0,  cat:"gaseosa"},
+  // Jugos
+  {name:"Jugo de naranja natural",      pct:88,  alc:0,  cat:"jugo"},
+  {name:"Jugo de manzana",              pct:88,  alc:0,  cat:"jugo"},
+  {name:"Jugo de uva",                  pct:84,  alc:0,  cat:"jugo"},
+  {name:"Jugo envasado (caja/botella)", pct:87,  alc:0,  cat:"jugo"},
+  {name:"Jugo en polvo preparado",      pct:98,  alc:0,  cat:"jugo"},
+  // Infusiones
+  {name:"Té (infusión)",                pct:99,  alc:0,  cat:"infusion"},
+  {name:"Café (infusión)",              pct:99,  alc:0,  cat:"infusion"},
+  {name:"Mate (cebado)",                pct:99,  alc:0,  cat:"infusion"},
+  {name:"Mate cocido",                  pct:99,  alc:0,  cat:"infusion"},
+  {name:"Leche chocolatada",            pct:84,  alc:0,  cat:"infusion"},
+  // Bebidas alcohólicas — ALERTA renal
+  {name:"Cerveza (lager, 5%)",          pct:93,  alc:5,  cat:"alcohol"},
+  {name:"Cerveza light (3.5%)",         pct:95,  alc:3.5,cat:"alcohol"},
+  {name:"Cerveza artesanal (6-7%)",     pct:90,  alc:6.5,cat:"alcohol"},
+  {name:"Vino tinto (12%)",             pct:86,  alc:12, cat:"alcohol"},
+  {name:"Vino blanco (11%)",            pct:87,  alc:11, cat:"alcohol"},
+  {name:"Vino rosado (11%)",            pct:87,  alc:11, cat:"alcohol"},
+  {name:"Champagne / espumante",        pct:85,  alc:12, cat:"alcohol"},
+  {name:"Ron / rhum (40%)",             pct:58,  alc:40, cat:"alcohol"},
+  {name:"Whisky (40%)",                 pct:60,  alc:40, cat:"alcohol"},
+  {name:"Tequila (38%)",                pct:62,  alc:38, cat:"alcohol"},
+  {name:"Vodka (40%)",                  pct:58,  alc:40, cat:"alcohol"},
+  {name:"Gin (40%)",                    pct:58,  alc:40, cat:"alcohol"},
+  {name:"Fernet (39%)",                 pct:55,  alc:39, cat:"alcohol"},
+  {name:"Caña / aguardiente (40%)",     pct:58,  alc:40, cat:"alcohol"},
+  {name:"Vermut (15%)",                 pct:80,  alc:15, cat:"alcohol"},
+  {name:"Sidra (5%)",                   pct:92,  alc:5,  cat:"alcohol"},
+];
+
+const CATS = Object.keys(DB);
+const MEALS = ["Desayuno","Almuerzo","Merienda","Cena","Otro"];
+const DOT_COLORS = ["#17a589","#2e86c1","#d4ac0d","#8e44ad","#e67e22"];
+const MONTHS_ES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+const DAYS_ES = ["Do","Lu","Ma","Mi","Ju","Vi","Sá"];
+
+let log = [], limit = 800, deferredPrompt = null;
+let calYear, calMonth, calSelected = null;
+
+// ── STORAGE ──────────────────────────────────────────────────────────────────
+function todayKey(){ return new Date().toISOString().slice(0,10); }
+
+function loadState(){
+  try{
+    const savedLimit = localStorage.getItem('hc_limit');
+    if(savedLimit) limit = parseInt(savedLimit);
+    const today = todayKey();
+    const savedDate = localStorage.getItem('hc_date');
+    if(savedDate !== today){
+      // Archive yesterday if has data
+      archiveDay(savedDate);
+      localStorage.setItem('hc_date', today);
+      localStorage.removeItem('hc_log');
+      log = [];
+    } else {
+      const s = localStorage.getItem('hc_log');
+      if(s) log = JSON.parse(s);
+    }
+  } catch(e){}
+}
+
+function archiveDay(dateKey){
+  if(!dateKey) return;
+  try{
+    const s = localStorage.getItem('hc_log');
+    if(!s) return;
+    const dayLog = JSON.parse(s);
+    if(!dayLog.length) return;
+    const hist = getHistory();
+    hist[dateKey] = {log: dayLog, limit: limit};
+    localStorage.setItem('hc_history', JSON.stringify(hist));
+  } catch(e){}
+}
+
+function saveToday(){
+  try{
+    localStorage.setItem('hc_log', JSON.stringify(log));
+    localStorage.setItem('hc_limit', limit);
+    localStorage.setItem('hc_date', todayKey());
+  } catch(e){}
+}
+
+function getHistory(){
+  try{ return JSON.parse(localStorage.getItem('hc_history') || '{}'); } catch(e){ return {}; }
+}
+
+function saveTodayToHistory(){
+  if(!log.length) return;
+  const hist = getHistory();
+  hist[todayKey()] = {log: log, limit: limit};
+  try{ localStorage.setItem('hc_history', JSON.stringify(hist)); } catch(e){}
+}
+
+// ── INIT UI ──────────────────────────────────────────────────────────────────
+loadState();
+
+// Sync limit inputs
+function syncLimitInputs(){
+  document.getElementById('limitH').value = limit;
+  document.getElementById('limitBig').value = limit;
+}
+syncLimitInputs();
+
+// Populate food categories
+CATS.forEach(c => {
+  const o = document.createElement('option');
+  o.value = c; o.textContent = c;
+  document.getElementById('catSel').appendChild(o);
+});
+
+// Populate drinks
+DRINKS.forEach((d, i) => {
+  const o = document.createElement('option');
+  o.value = i; o.textContent = d.name + (d.alc > 0 ? ` · ${d.alc}% alc.` : '');
+  document.getElementById('drinkSel').appendChild(o);
+});
+
+// ── TAB SWITCH ────────────────────────────────────────────────────────────────
+function switchInputTab(tab){
+  const isFood = tab === 'food';
+  document.getElementById('formFood').style.display = isFood ? '' : 'none';
+  document.getElementById('formDrink').style.display = isFood ? 'none' : '';
+  document.getElementById('tabFood').classList.toggle('active', isFood);
+  document.getElementById('tabDrink').classList.toggle('active', !isFood);
+}
+
+// ── FOOD FORM ─────────────────────────────────────────────────────────────────
+function populateFoods(){
+  const cat = document.getElementById('catSel').value;
+  const state = document.getElementById('stateSel').value;
+  const foods = (DB[cat] && DB[cat][state]) || [];
+  const sel = document.getElementById('foodSel');
+  sel.innerHTML = '';
+  foods.forEach((f,i) => {
+    const o = document.createElement('option');
+    o.value = i; o.textContent = `${f.name}  ·  ${f.pct}% agua`;
+    sel.appendChild(o);
+  });
+  updateFoodPreview();
+}
+
+function updateFoodPreview(){
+  const cat = document.getElementById('catSel').value;
+  const state = document.getElementById('stateSel').value;
+  const idx = parseInt(document.getElementById('foodSel').value);
+  const g = parseFloat(document.getElementById('gramInput').value) || 0;
+  const foods = (DB[cat] && DB[cat][state]) || [];
+  if(foods[idx] && g > 0){
+    const ml = Math.round((foods[idx].pct / 100) * g);
+    document.getElementById('previewMl').textContent = ml + ' ml';
+    document.getElementById('previewInfo').textContent = `${foods[idx].pct}% de agua · ${g}g`;
+  } else {
+    document.getElementById('previewMl').textContent = '— ml';
+    document.getElementById('previewInfo').textContent = 'Selecciona un alimento';
+  }
+}
+
+document.getElementById('catSel').addEventListener('change', populateFoods);
+document.getElementById('stateSel').addEventListener('change', populateFoods);
+document.getElementById('foodSel').addEventListener('change', updateFoodPreview);
+document.getElementById('gramInput').addEventListener('input', updateFoodPreview);
+
+// ── DRINK FORM ────────────────────────────────────────────────────────────────
+function updateDrinkPreview(){
+  const idx = parseInt(document.getElementById('drinkSel').value);
+  const ml = parseFloat(document.getElementById('drinkMl').value) || 0;
+  const d = DRINKS[idx];
+  if(!d){ return; }
+  const waterMl = Math.round((d.pct / 100) * ml);
+  document.getElementById('drinkPreviewMl').textContent = waterMl + ' ml';
+  const alcWarn = d.alc > 0 ? ` ⚠ ${d.alc}% alcohol` : '';
+  document.getElementById('drinkPreviewInfo').textContent = `${d.pct}% agua en ${ml}ml${alcWarn}`;
+}
+
+document.getElementById('drinkSel').addEventListener('change', updateDrinkPreview);
+document.getElementById('drinkMl').addEventListener('input', updateDrinkPreview);
+
+// ── ADD FOOD ──────────────────────────────────────────────────────────────────
+document.getElementById('addFoodBtn').addEventListener('click', () => {
+  const cat = document.getElementById('catSel').value;
+  const state = document.getElementById('stateSel').value;
+  const idx = parseInt(document.getElementById('foodSel').value);
+  const g = parseFloat(document.getElementById('gramInput').value) || 0;
+  const meal = document.getElementById('mealSel').value;
+  const foods = (DB[cat] && DB[cat][state]) || [];
+  if(!foods[idx] || g <= 0) return;
+  const f = foods[idx];
+  const ml = Math.round((f.pct / 100) * g);
+  log.push({id:Date.now(), type:'food', name:f.name, cat, state, grams:g, pct:f.pct, ml, meal, time:new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})});
+  saveToday(); saveTodayToHistory(); renderAll();
+  if(navigator.vibrate) navigator.vibrate(30);
+});
+
+// ── ADD DRINK ─────────────────────────────────────────────────────────────────
+document.getElementById('addDrinkBtn').addEventListener('click', () => {
+  const idx = parseInt(document.getElementById('drinkSel').value);
+  const ml = parseFloat(document.getElementById('drinkMl').value) || 0;
+  const meal = document.getElementById('drinkMealSel').value;
+  const d = DRINKS[idx];
+  if(!d || ml <= 0) return;
+  const waterMl = Math.round((d.pct / 100) * ml);
+  log.push({id:Date.now(), type:'drink', name:d.name, cat:d.cat, state:'bebida', grams:ml, pct:d.pct, ml:waterMl, meal, alc:d.alc, totalMl:ml, time:new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})});
+  saveToday(); saveTodayToHistory(); renderAll();
+  if(navigator.vibrate) navigator.vibrate(30);
+});
+
+// ── LIMIT ─────────────────────────────────────────────────────────────────────
+function syncLimit(v){
+  limit = parseInt(v) || 800;
+  document.getElementById('limitH').value = limit;
+  document.getElementById('limitBig').value = limit;
+  saveToday(); renderSummary();
+}
+document.getElementById('limitH').addEventListener('input', e => syncLimit(e.target.value));
+document.getElementById('limitBig').addEventListener('input', e => syncLimit(e.target.value));
+
+// ── NEW DAY ───────────────────────────────────────────────────────────────────
+document.getElementById('newDayBtn').addEventListener('click', () => {
+  if(!confirm('¿Iniciar un nuevo día? Se guardará el historial y se limpiará el registro.')) return;
+  saveTodayToHistory();
+  log = [];
+  saveToday(); renderAll();
+});
+
+// ── RENDER ALL ────────────────────────────────────────────────────────────────
+function renderAll(){ renderLog(); renderSummary(); renderMealBreakdown(); }
+
+function mlColor(v){ const r = v/limit; return r > 1 ? '#e74c3c' : r > 0.5 ? '#d4ac0d' : '#17a589'; }
+
+function renderLog(){
+  const el = document.getElementById('logList');
+  if(!log.length){ el.innerHTML='<div class="log-empty">Aún no se registraron alimentos</div>'; return; }
+  el.innerHTML = log.map(item => `
+    <div class="log-item">
+      <div class="log-dot" style="background:${DOT_COLORS[MEALS.indexOf(item.meal)%DOT_COLORS.length]}"></div>
+      <div class="log-info">
+        <div class="log-name">${item.name}</div>
+        <div class="log-meta">
+          <span>${item.meal}</span>·
+          <span>${item.type==='drink' ? item.totalMl+'ml' : item.grams+'g'}</span>·
+          <span class="tag-${item.state}">${item.state}</span>
+          ${item.alc > 0 ? '<span style="color:#e74c3c;font-size:9px;font-weight:600;">⚠ ALCOHOL</span>' : ''}
+        </div>
+      </div>
+      <div class="log-ml" style="color:${mlColor(item.ml)}">${item.ml} ml</div>
+      <button class="log-del" data-id="${item.id}" aria-label="Eliminar">
+        <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+      </button>
+    </div>`).join('');
+  el.querySelectorAll('.log-del').forEach(btn => {
+    btn.addEventListener('click', () => {
+      log = log.filter(x => x.id !== parseInt(btn.dataset.id));
+      saveToday(); saveTodayToHistory(); renderAll();
+    });
+  });
+}
+
+function renderSummary(){
+  const total = log.reduce((a,b) => a+b.ml, 0);
+  const hasAlc = log.some(x => x.alc > 0);
+  const left = Math.max(0, limit - total);
+  const pct = Math.min(100, Math.round((total/limit)*100));
+  document.getElementById('mTotal').textContent = total;
+  document.getElementById('mPct').textContent = pct + '%';
+  document.getElementById('mLimit').textContent = limit;
+  document.getElementById('mLeft').textContent = left;
+  document.getElementById('mCount').textContent = log.length;
+  const bar = document.getElementById('mBar');
+  bar.style.width = pct + '%';
+  bar.style.background = total > limit ? '#e74c3c' : total/limit > 0.75 ? '#d4ac0d' : '#17a589';
+  let html = '';
+  if(!log.length){
+    html = `<div class="alert-strip al-ok">Sin registros. Agregá los alimentos y bebidas consumidos.</div>`;
+  } else if(total > limit){
+    html = `<div class="alert-strip al-danger">⚠ Límite superado: ${total} ml · Exceso: ${total-limit} ml. Comunicar al nefrólogo.</div>`;
+  } else if(total/limit > 0.75){
+    html = `<div class="alert-strip al-warn">Precaución: ${pct}% del límite (${total} ml). Quedan ${left} ml.</div>`;
+  } else {
+    html = `<div class="alert-strip al-ok">Dentro del límite · ${total} ml (${pct}%) · Disponible: ${left} ml</div>`;
+  }
+  if(hasAlc) html += `<div class="alert-strip al-danger" style="margin-top:6px;">⚠ Se registraron bebidas alcohólicas. El alcohol puede afectar la función renal. Consultar con el médico.</div>`;
+  document.getElementById('alertStrip').innerHTML = html;
+}
+
+function renderMealBreakdown(){
+  const el = document.getElementById('mealBreakdown');
+  const totals = {};
+  MEALS.forEach(m => totals[m] = 0);
+  log.forEach(item => totals[item.meal] = (totals[item.meal]||0) + item.ml);
+  const used = MEALS.filter(m => totals[m] > 0);
+  if(!used.length){ el.innerHTML='<div class="meal-empty">Sin datos</div>'; return; }
+  el.innerHTML = MEALS.map((m,i) => {
+    if(!totals[m]) return '';
+    const w = Math.min(100, Math.round((totals[m]/limit)*100));
+    return `<div class="meal-row">
+      <span class="meal-name">${m}</span>
+      <div class="meal-track"><div class="meal-fill" style="width:${w}%;background:${DOT_COLORS[i%DOT_COLORS.length]}"></div></div>
+      <span class="meal-val">${totals[m]} ml</span>
+    </div>`;
+  }).join('');
+}
+
+// ── CALENDAR ──────────────────────────────────────────────────────────────────
+function initCalendar(){
+  const now = new Date();
+  calYear = now.getFullYear();
+  calMonth = now.getMonth();
+  renderCalendar();
+}
+
+function renderCalendar(){
+  document.getElementById('calMonthLabel').textContent = `${MONTHS_ES[calMonth]} ${calYear}`;
+  const hist = getHistory();
+  // Also include today
+  const todayData = log.length ? {log, limit} : null;
+  if(todayData) hist[todayKey()] = todayData;
+
+  const grid = document.getElementById('calGrid');
+  grid.innerHTML = '';
+  DAYS_ES.forEach(d => {
+    const el = document.createElement('div');
+    el.className = 'cal-dow'; el.textContent = d;
+    grid.appendChild(el);
+  });
+
+  const firstDay = new Date(calYear, calMonth, 1).getDay();
+  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+  const todayStr = todayKey();
+  const todayD = new Date();
+
+  for(let i = 0; i < firstDay; i++){
+    const el = document.createElement('div'); el.className='cal-day empty'; grid.appendChild(el);
+  }
+  for(let d = 1; d <= daysInMonth; d++){
+    const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const el = document.createElement('div');
+    el.textContent = d;
+    el.className = 'cal-day';
+    const dayData = hist[dateStr];
+    if(dayData && dayData.log && dayData.log.length){
+      const total = dayData.log.reduce((a,b) => a+b.ml, 0);
+      el.classList.add('has-data');
+      if(total > dayData.limit) el.classList.add('over');
+    }
+    if(dateStr === todayStr) el.classList.add('today');
+    if(dateStr === calSelected) el.classList.add('selected');
+    el.addEventListener('click', () => { calSelected = dateStr; renderCalendar(); showDayDetail(dateStr, hist[dateStr]); });
+    grid.appendChild(el);
+  }
+}
+
+function showDayDetail(dateStr, dayData){
+  const el = document.getElementById('dayDetail');
+  el.style.display = '';
+  const parts = dateStr.split('-');
+  const label = `${parseInt(parts[2])} de ${MONTHS_ES[parseInt(parts[1])-1]} de ${parts[0]}`;
+  if(!dayData || !dayData.log || !dayData.log.length){
+    el.innerHTML = `<div class="day-detail-title">${label}</div><div class="day-detail-empty">Sin registros</div>`;
+    return;
+  }
+  const total = dayData.log.reduce((a,b) => a+b.ml, 0);
+  const pct = Math.min(100, Math.round((total / dayData.limit)*100));
+  let rows = dayData.log.map(item => `
+    <div class="day-detail-row">
+      <span>${item.name} (${item.type==='drink'?item.totalMl+'ml':item.grams+'g'})</span>
+      <span style="font-family:var(--mono);font-weight:500;color:${total>dayData.limit?'#c0392b':'var(--text)'}">${item.ml} ml</span>
+    </div>`).join('');
+  el.innerHTML = `
+    <div class="day-detail-title">${label} · Total: ${total} ml (${pct}% de ${dayData.limit} ml)</div>
+    ${rows}`;
+}
+
+document.getElementById('prevMonth').addEventListener('click', () => {
+  calMonth--; if(calMonth < 0){ calMonth = 11; calYear--; }
+  calSelected = null; document.getElementById('dayDetail').style.display='none';
+  renderCalendar();
+});
+document.getElementById('nextMonth').addEventListener('click', () => {
+  calMonth++; if(calMonth > 11){ calMonth = 0; calYear++; }
+  calSelected = null; document.getElementById('dayDetail').style.display='none';
+  renderCalendar();
+});
+
+// ── EXPORT CSV ────────────────────────────────────────────────────────────────
+document.getElementById('exportBtn').addEventListener('click', () => {
+  const hist = getHistory();
+  const todayData = log.length ? {log, limit} : null;
+  if(todayData) hist[todayKey()] = todayData;
+  const keys = Object.keys(hist).sort();
+  if(!keys.length){ alert('No hay datos para exportar.'); return; }
+
+  let csv = 'Fecha,Momento,Alimento / Bebida,Tipo,Estado,Gramos/ml,% Agua,Agua (ml),Límite día (ml),Total día (ml),% Límite\n';
+  keys.forEach(dateKey => {
+    const d = hist[dateKey];
+    if(!d || !d.log) return;
+    const total = d.log.reduce((a,b) => a+b.ml, 0);
+    const pctLimit = Math.round((total / d.limit)*100);
+    d.log.forEach(item => {
+      csv += [
+        dateKey, item.meal,
+        '"' + item.name.replace(/"/g,'""') + '"',
+        item.type === 'drink' ? 'Bebida' : 'Alimento',
+        item.state,
+        item.type === 'drink' ? item.totalMl : item.grams,
+        item.pct, item.ml, d.limit, total, pctLimit
+      ].join(',') + '\n';
+    });
+  });
+
+  const blob = new Blob(['\uFEFF' + csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `HidroControl_Oswin_${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+});
+
+// ── NAVIGATION ────────────────────────────────────────────────────────────────
+document.querySelectorAll('.nav-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const view = btn.dataset.view;
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.section-view').forEach(v => v.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('view-' + view).classList.add('active');
+    if(view === 'history') renderCalendar();
+  });
+});
+
+// ── PWA INSTALL ───────────────────────────────────────────────────────────────
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault(); deferredPrompt = e;
+  document.getElementById('installBanner').style.display = 'flex';
+});
+document.getElementById('installBtn').addEventListener('click', async () => {
+  if(!deferredPrompt) return;
+  deferredPrompt.prompt();
+  await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  document.getElementById('installBanner').style.display = 'none';
+});
+document.getElementById('closeBanner').addEventListener('click', () => {
+  document.getElementById('installBanner').style.display = 'none';
+});
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').catch(()=>{}); });
+}
+
+// ── BOOT ──────────────────────────────────────────────────────────────────────
+populateFoods();
+updateDrinkPreview();
+renderAll();
+initCalendar();
+</script>
+</body>
+</html>
